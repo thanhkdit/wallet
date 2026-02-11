@@ -6,6 +6,7 @@ import '../data/models/category_model.dart';
 import '../screens/card_detail_screen.dart';
 import 'quick_add_dialog.dart';
 
+
 class ExpenseCard extends StatefulWidget {
   final CategoryModel category;
 
@@ -26,7 +27,7 @@ class _ExpenseCardState extends State<ExpenseCard> with SingleTickerProviderStat
       vsync: this,
       duration: const Duration(milliseconds: 150),
       lowerBound: 0.0,
-      upperBound: 0.1,
+      upperBound: 0.05, // Reduced scale effect for subtlety
     )..addListener(() {
         setState(() {});
       });
@@ -61,8 +62,16 @@ class _ExpenseCardState extends State<ExpenseCard> with SingleTickerProviderStat
   @override
   Widget build(BuildContext context) {
     final scale = 1.0 - _controller.value;
-    final total = widget.category.expenses.fold(0.0, (sum, item) => sum + item.amount);
-    final currencyFormat = NumberFormat.simpleCurrency(decimalDigits: 0);
+    final total = ((widget.category.expenses as List<dynamic>?) ?? []).fold(0.0, (sum, item) => sum + (item as dynamic).amount);
+    
+    // Safe formatter: en_US pattern with dots for thousands
+    final currencyFormatter = NumberFormat.currency(locale: 'en_US', symbol: '', decimalDigits: 0);
+    String formatCurrency(double amount) {
+      return currencyFormatter.format(amount).replaceAll(',', '.');
+    } 
+
+    final bgColor = Color(widget.category.backgroundColor);
+    final textColor = Color(widget.category.textColor);
 
     return GestureDetector(
       onTapDown: _onTapDown,
@@ -72,114 +81,157 @@ class _ExpenseCardState extends State<ExpenseCard> with SingleTickerProviderStat
         scale: scale,
         child: Hero(
           tag: 'card_${widget.category.id}',
-          child: Card(
-            color: Color(widget.category.backgroundColor),
+          child: Container(
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.brown.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
             child: Stack(
               children: [
                 Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: const EdgeInsets.all(20.0),
                   child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header
-                  Padding(
-                    padding: const EdgeInsets.only(right: 32.0),
-                    child: Text(
-                      widget.category.name,
-                      style: GoogleFonts.nunito(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Color(widget.category.textColor),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  
-                  // Body (Recent 3 expenses)
-                  ...widget.category.expenses.take(3).map((e) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 2.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            e.note.isEmpty ? 'Expense' : e.note,
-                            style: GoogleFonts.nunito(
-                              fontSize: 14,
-                              color: Color(widget.category.textColor).withValues(alpha: 0.8),
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          )
-                        ),
-                        Text(
-                          currencyFormat.format(e.amount),
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header: Title
+                      Padding(
+                        padding: const EdgeInsets.only(right: 40.0), // Space for button
+                        child: Text(
+                          widget.category.name,
                           style: GoogleFonts.nunito(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Color(widget.category.textColor),
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: textColor,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 16),
+                      
+                      // Body: List of recent items
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: widget.category.expenses.take(3).map((e) => Padding(
+                          padding: const EdgeInsets.only(bottom: 6.0),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 4, 
+                                height: 4, 
+                                decoration: BoxDecoration(
+                                  color: textColor.withValues(alpha: 0.4),
+                                  shape: BoxShape.circle
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  e.note.isEmpty ? 'Expense' : e.note,
+                                  style: GoogleFonts.nunito(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: textColor.withValues(alpha: 0.7),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                formatCurrency(e.amount),
+                                style: GoogleFonts.nunito(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: textColor.withValues(alpha: 0.8),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )).toList(),
+                      ),
+                      
+                      if (widget.category.expenses.length > 3)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2.0, bottom: 8.0),
+                          child: Text(
+                            '+ ${widget.category.expenses.length - 3} more',
+                            style: GoogleFonts.nunito(
+                              fontSize: 12,
+                              fontStyle: FontStyle.italic,
+                              color: textColor.withValues(alpha: 0.5),
+                            ),
                           ),
                         ),
-                      ],
-                    ),
-                  )),
-                  if (widget.category.expenses.length > 3)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4.0),
-                      child: Text(
-                        '+ ${widget.category.expenses.length - 3} more',
-                        style: GoogleFonts.nunito(
-                          fontSize: 12,
-                          color: Color(widget.category.textColor).withValues(alpha: 0.6),
-                        ),
-                      ),
-                    ),
 
-                  const SizedBox(height: 12),
-                  // Footer
-                  Divider(color: Color(widget.category.textColor).withValues(alpha: 0.2)),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Total',
-                        style: GoogleFonts.nunito(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Color(widget.category.textColor),
-                        ),
-                      ),
-                      Text(
-                        currencyFormat.format(total),
-                        style: GoogleFonts.nunito(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Color(widget.category.textColor),
+                      const SizedBox(height: 16),
+
+                      // Footer: Total
+                      Align(
+                        alignment: Alignment.bottomRight,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              'Total',
+                              style: GoogleFonts.nunito(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: textColor.withValues(alpha: 0.6),
+                              ),
+                            ),
+                            Text(
+                              formatCurrency(total),
+                              style: GoogleFonts.nunito(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w900, // Extra bold
+                                color: textColor,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
-            Positioned(
-              top: 0,
-              right: 0,
-              child: IconButton(
-                icon: Icon(Icons.add, color: Color(widget.category.textColor)),
-                onPressed: () {
-                  showModalBottomSheet(
-                    context: context,
-                    isScrollControlled: true,
-                    builder: (context) => Padding(
-                        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-                        child: QuickAddDialog(category: widget.category)
+                ),
+                
+                // Floating Action Button Style "Quick Add"
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: Material(
+                    color: Colors.white.withValues(alpha: 0.3),
+                    shape: const CircleBorder(),
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
+                      onTap: () {
+                         showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.transparent, // Important for rounded corners on dialog
+                            builder: (context) => Padding(
+                                padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+                                child: QuickAddDialog(category: widget.category)
+                            ),
+                          );
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Icon(Icons.add, size: 20, color: textColor),
+                      ),
                     ),
-                  );
-                },
-              ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
           ),
         ),
       ),

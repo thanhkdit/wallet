@@ -150,10 +150,18 @@ class CardDetailScreen extends ConsumerWidget {
                   ),
                 );
             },
-            label: const Text('Add Expense'),
+            label: Text(
+              'Add Expense',
+              style: GoogleFonts.nunito(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
             icon: const Icon(Icons.add),
-            backgroundColor: Color(currentCategory.textColor), // Contrast
+            backgroundColor: Color(currentCategory.textColor),
             foregroundColor: Color(currentCategory.backgroundColor),
+            elevation: 4,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)), // Pill shape
           ),
         );
       },

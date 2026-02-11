@@ -7,11 +7,13 @@ import 'providers/providers.dart';
 import 'screens/dashboard_screen.dart';
 import 'theme/app_theme.dart';
 
+import 'package:flutter_localizations/flutter_localizations.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Initialize date formatting
-  await initializeDateFormatting();
+  // Initialize date formatting for Vietnamese locale
+  await initializeDateFormatting('vi_VN', null);
 
   // Initialize Database
   final databaseService = DatabaseService();
@@ -36,6 +38,15 @@ class AntigravityNoteApp extends StatelessWidget {
       title: 'AntigravityNote',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.theme,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('vi', 'VN'),
+        Locale('en', 'US'),
+      ],
       home: const DashboardScreen(),
     );
   }
