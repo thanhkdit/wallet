@@ -85,10 +85,12 @@ class _ExpenseCardState extends State<ExpenseCard> with SingleTickerProviderStat
             decoration: BoxDecoration(
               color: bgColor,
               borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.5), width: 1.5), // Highlight border
               boxShadow: [
                 BoxShadow(
-                  color: Colors.brown.withValues(alpha: 0.05),
-                  blurRadius: 10,
+                  color: Colors.brown.withValues(alpha: 0.08), // Warmer, softer shadow
+                  blurRadius: 12, // Softer edges
+                  spreadRadius: 1,
                   offset: const Offset(0, 4),
                 ),
               ],

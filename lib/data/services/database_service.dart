@@ -81,34 +81,29 @@ class DatabaseService {
 
   // Aggregation
   List<CategoryModel> getCategoriesWithExpenses(DateTime month) {
-    final categories = getAllCategories();
-    final expenses = getExpensesForMonth(month);
+    // Legacy support: construct a range for the month
+    final start = DateTime(month.year, month.month, 1);
+    final end = DateTime(month.year, month.month + 1, 0, 23, 59, 59); // End of month
+    return getCategoriesWithExpensesInRange(start, end);
+  }
 
-    // Map expenses to categories
-    Map<String, List<ExpenseModel>> expensesByCategory = {};
-    for (var expense in expenses) {
-      if (!expensesByCategory.containsKey(expense.categoryId)) {
-        expensesByCategory[expense.categoryId] = [];
-      }
-      expensesByCategory[expense.categoryId]!.add(expense);
-    }
-    
-    // Sort expenses by date desc
-    for (var key in expensesByCategory.keys) {
-        expensesByCategory[key]!.sort((a, b) => b.date.compareTo(a.date));
-    }
+  List<CategoryModel> getCategoriesWithExpensesInRange(DateTime start, DateTime end) {
+    final categories = _categoriesBox.values.toList();
+    final expenses = _expensesBox.values.toList();
 
-    // Populate categories
+    // Map expenses to categories, filtering by date range
     return categories.map((cat) {
-      // Create a copy with expenses
-      return CategoryModel(
-        id: cat.id,
-        name: cat.name,
-        backgroundColor: cat.backgroundColor,
-        textColor: cat.textColor,
-        sortOrder: cat.sortOrder,
-        expenses: expensesByCategory[cat.id] ?? [],
-      );
-    }).toList();
+      final categoryExpenses = expenses
+          .where((e) => e.categoryId == cat.id && 
+                        e.date.isAfter(start.subtract(const Duration(seconds: 1))) && 
+                        e.date.isBefore(end.add(const Duration(seconds: 1))))
+          .toList();
+      
+      // Sort expenses by date desc
+      categoryExpenses.sort((a, b) => b.date.compareTo(a.date));
+
+      return cat.copyWith(expenses: categoryExpenses);
+    }).toList()
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
   }
 }

@@ -44,6 +44,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   void _addNewCategory() {
     showDialog(
       context: context,
+      barrierDismissible: false, // Prevent closing when tapping outside
       builder: (context) {
         final controller = TextEditingController();
         Color selectedBaseColor = AppTheme.baseColors[0]; // Light Yellow
@@ -55,9 +56,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
         return StatefulBuilder(
           builder: (context, setState) {
-            return AlertDialog(
-              title: const Text('New Category'),
-              content: Column(
+            return GestureDetector(
+              onTap: () => FocusScope.of(context).unfocus(), // Hide keyboard on tap
+              child: AlertDialog(
+                title: const Text('New Category'),
+                content: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch, // Stretch children to fill dialog width
                 children: [
@@ -78,113 +81,124 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  // Aesthetic Color Picker (Wrap Layout)
-                  // Base Colors
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: AppTheme.baseColors.map((baseColor) {
-                      final isBaseSelected = AppTheme.isSameBaseColor(selectedBaseColor, baseColor);
-                      return GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            selectedBaseColor = baseColor;
-                            // Auto-select a nice mid-tone (index 4 out of 10)
-                            final shades = AppTheme.getShades(baseColor);
-                            selectedColor = shades[4]; 
-                            textColor = AppTheme.getContrastTextColor(selectedColor);
-                          });
-                        },
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: baseColor,
-                            shape: BoxShape.circle,
-                            border: isBaseSelected 
-                              ? Border.all(color: AppTheme.textColor, width: 2.5)
-                              : Border.all(color: Colors.grey.withValues(alpha: 0.1), width: 1),
-                              boxShadow: [
-                                if (isBaseSelected)
-                                  BoxShadow(
-                                    color: baseColor.withValues(alpha: 0.4),
-                                    blurRadius: 6,
-                                    offset: const Offset(0, 3)
-                                  )
-                              ]
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Modern Separator
-                  Row(
-                    children: [
-                      Expanded(child: Divider(color: AppTheme.secretGrey.withValues(alpha: 0.1))),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        child: Icon(Icons.palette_outlined, size: 16, color: AppTheme.secretGrey.withValues(alpha: 0.5)),
-                      ),
-                      Expanded(child: Divider(color: AppTheme.secretGrey.withValues(alpha: 0.1))),
-                    ],
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Shades (Wrap Layout)
-                  Wrap(
-                     spacing: 12,
-                     runSpacing: 12,
-                     children: AppTheme.getShades(selectedBaseColor).map((shadeColor) {
-                       final isSelected = selectedColor.toARGB32() == shadeColor.toARGB32();
-                       return GestureDetector(
-                         onTap: () {
-                           setState(() {
-                             selectedColor = shadeColor;
-                             textColor = AppTheme.getContrastTextColor(selectedColor);
-                           });
-                         },
-                         child: AnimatedContainer(
-                           duration: const Duration(milliseconds: 200),
-                           width: 40,
-                           height: 40,
-                           decoration: BoxDecoration(
-                             color: shadeColor,
-                             shape: BoxShape.circle,
-                             border: isSelected 
-                               ? Border.all(color: AppTheme.textColor, width: 2.5) 
-                               : Border.all(color: Colors.grey.withValues(alpha: 0.1), width: 1),
-                           ),
-                           child: isSelected 
-                             ? Icon(Icons.check, size: 20, color: textColor)
-                             : null,
-                         ),
-                       );
-                     }).toList(),
-                  ),
-
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
                   
-                  // Preview
-                  Container(
-                    width: double.maxFinite,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: selectedColor,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Text(
-                      controller.text.isEmpty ? 'Category Name' : controller.text,
-                      style: GoogleFonts.nunito(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: textColor, // Fixed color
+                  Flexible(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // Aesthetic Color Picker (Wrap Layout)
+                          // Base Colors
+                          Wrap(
+                            spacing: 12,
+                            runSpacing: 12,
+                            children: AppTheme.baseColors.map((baseColor) {
+                              final isBaseSelected = AppTheme.isSameBaseColor(selectedBaseColor, baseColor);
+                              return GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    selectedBaseColor = baseColor;
+                                    // Auto-select a nice mid-tone (index 4 out of 10)
+                                    final shades = AppTheme.getShades(baseColor);
+                                    selectedColor = shades[4]; 
+                                    textColor = AppTheme.getContrastTextColor(selectedColor);
+                                  });
+                                },
+                                child: Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: baseColor,
+                                    shape: BoxShape.circle,
+                                    border: isBaseSelected 
+                                      ? Border.all(color: AppTheme.textColor, width: 2.5)
+                                      : Border.all(color: Colors.grey.withValues(alpha: 0.1), width: 1),
+                                      boxShadow: [
+                                        if (isBaseSelected)
+                                          BoxShadow(
+                                            color: baseColor.withValues(alpha: 0.4),
+                                            blurRadius: 6,
+                                            offset: const Offset(0, 3)
+                                          )
+                                      ]
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          // Modern Separator
+                          Row(
+                            children: [
+                              Expanded(child: Divider(color: AppTheme.secretGrey.withValues(alpha: 0.1))),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                child: Icon(Icons.palette_outlined, size: 16, color: AppTheme.secretGrey.withValues(alpha: 0.5)),
+                              ),
+                              Expanded(child: Divider(color: AppTheme.secretGrey.withValues(alpha: 0.1))),
+                            ],
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          // Shades (Wrap Layout)
+                          Wrap(
+                             spacing: 12,
+                             runSpacing: 12,
+                             children: AppTheme.getShades(selectedBaseColor).map((shadeColor) {
+                               final isSelected = selectedColor.toARGB32() == shadeColor.toARGB32();
+                               return GestureDetector(
+                                 onTap: () {
+                                   setState(() {
+                                     selectedColor = shadeColor;
+                                     textColor = AppTheme.getContrastTextColor(selectedColor);
+                                   });
+                                 },
+                                 child: AnimatedContainer(
+                                   duration: const Duration(milliseconds: 200),
+                                   width: 40,
+                                   height: 40,
+                                   decoration: BoxDecoration(
+                                     color: shadeColor,
+                                     shape: BoxShape.circle,
+                                     border: isSelected 
+                                       ? Border.all(color: AppTheme.textColor, width: 2.5) 
+                                       : Border.all(color: Colors.grey.withValues(alpha: 0.1), width: 1),
+                                   ),
+                                   child: isSelected 
+                                     ? Icon(Icons.check, size: 20, color: textColor)
+                                     : null,
+                                 ),
+                               );
+                             }).toList(),
+                          ),
+
+                          const SizedBox(height: 24),
+                          
+                          // Preview
+                          Container(
+                            width: double.maxFinite,
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: selectedColor,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Text(
+                              controller.text.isEmpty ? 'Category Name' : controller.text,
+                              style: GoogleFonts.nunito(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: textColor, // Fixed color
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ],
                       ),
-                      textAlign: TextAlign.center,
                     ),
                   ),
                 ],
@@ -215,11 +229,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   child: Text('Add', style: GoogleFonts.nunito(fontWeight: FontWeight.bold)),
                 ),
               ],
-            );
-          }
-        );
-      },
-    );
+            ),
+          );
+        }
+      );
+    },
+  );
   }
 
   void _showSettingsDialog() {
