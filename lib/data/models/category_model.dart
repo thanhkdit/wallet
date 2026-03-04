@@ -4,6 +4,14 @@ import 'expense_model.dart';
 
 part 'category_model.g.dart';
 
+@HiveType(typeId: 2)
+enum CategoryType {
+  @HiveField(0)
+  expense,
+  @HiveField(1)
+  income,
+}
+
 @HiveType(typeId: 0)
 class CategoryModel extends HiveObject {
   @HiveField(0)
@@ -21,6 +29,9 @@ class CategoryModel extends HiveObject {
   @HiveField(4)
   final int sortOrder;
 
+  @HiveField(5)
+  final CategoryType type;
+
   // Not persisted, populated at runtime
   List<ExpenseModel> expenses = [];
 
@@ -30,6 +41,7 @@ class CategoryModel extends HiveObject {
     required this.backgroundColor,
     required this.textColor,
     required this.sortOrder,
+    this.type = CategoryType.expense,
     this.expenses = const [],
   });
 
@@ -39,6 +51,7 @@ class CategoryModel extends HiveObject {
     int? backgroundColor,
     int? textColor,
     int? sortOrder,
+    CategoryType? type,
     List<ExpenseModel>? expenses,
   }) {
     return CategoryModel(
@@ -47,6 +60,7 @@ class CategoryModel extends HiveObject {
       backgroundColor: backgroundColor ?? this.backgroundColor,
       textColor: textColor ?? this.textColor,
       sortOrder: sortOrder ?? this.sortOrder,
+      type: type ?? this.type,
       expenses: expenses ?? this.expenses,
     );
   }

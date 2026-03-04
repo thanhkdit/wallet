@@ -4,118 +4,148 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../theme/app_theme.dart';
+import '../utils/currency_formatter.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import '../data/models/category_model.dart';
+import '../data/models/expense_model.dart';
 import '../providers/providers.dart';
 import '../widgets/quick_add_dialog.dart';
 
-class CardDetailScreen extends ConsumerWidget {
+class CardDetailScreen extends ConsumerStatefulWidget {
   final CategoryModel category;
 
   const CardDetailScreen({super.key, required this.category});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CardDetailScreen> createState() => _CardDetailScreenState();
+}
+
+class _CardDetailScreenState extends ConsumerState<CardDetailScreen> {
+  late CategoryModel _currentCategory;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentCategory = widget.category;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     // Watch the specific category to get updates
-    final categoriesAsync = ref.watch(categoriesProvider);
+    final categoriesAsync = ref.watch(categoriesProvider(widget.category.type));
     
-    return categoriesAsync.when(
-      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (err, stack) => Scaffold(body: Center(child: Text('Error: $err'))),
-      data: (categories) {
-        // Find the updated category
-        final updatedCategory = categories.cast<CategoryModel?>().firstWhere(
-              (c) => c?.id == category.id,
-              orElse: () => null,
-            );
+    // Proactively update _currentCategory if found
+    categoriesAsync.whenData((categories) {
+       final found = categories.cast<CategoryModel?>().firstWhere(
+           (c) => c?.id == widget.category.id, 
+           orElse: () => null,
+       );
+       if (found != null && mounted) {
+           // We found the category in the updated list, so update our local state
+           // Use setState is safer although technically build executes immediately after this
+           // But since we are inside build, we shouldn't call setState.
+           // Just updating the field is enough for this build pass? 
+           // No, we cannot update state during build directly without risk.
+           // Actually, since we are inside build(), we can just use a local variable
+           // But we want to persist the OLD value if the new one is missing.
+           // So:
+           // If found -> _currentCategory = found;
+           // If NOT found -> keep _currentCategory (stale/ghost);
+           _currentCategory = found;
+       }
+    });
 
-        // If category was deleted, pop
-        if (updatedCategory == null) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-             if (context.mounted) Navigator.pop(context);
-          });
-          return const SizedBox();
-        }
+    final currentCategory = _currentCategory;
+    final dateFormat = DateFormat('MMM d, yyyy');
 
-        final currentCategory = updatedCategory;
-        final currencyFormat = NumberFormat.simpleCurrency();
-        final dateFormat = DateFormat('MMM d, yyyy');
-
-        return Scaffold(
-          backgroundColor: Color(currentCategory.backgroundColor),
-          appBar: AppBar(
-            backgroundColor: Color(currentCategory.backgroundColor),
-            elevation: 0,
-            leading: IconButton(
-              icon: Icon(Icons.arrow_back, color: Color(currentCategory.textColor)),
-              onPressed: () => Navigator.pop(context),
-            ),
-            actions: [
-              IconButton(
-                icon: Icon(Icons.edit, color: Color(currentCategory.textColor)),
-                onPressed: () => _editCategory(context, ref, currentCategory),
-              ),
-              IconButton(
-                icon: Icon(Icons.delete, color: Color(currentCategory.textColor)),
-                onPressed: () => _confirmDelete(context, ref, currentCategory.id),
-              ),
-            ],
+    return Scaffold(
+      backgroundColor: Color(currentCategory.backgroundColor),
+      appBar: AppBar(
+        backgroundColor: Color(currentCategory.backgroundColor),
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Color(currentCategory.textColor)),
+          onPressed: () => Navigator.pop(context),
+        ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.edit, color: Color(currentCategory.textColor)),
+            onPressed: () => _editCategory(context, ref, currentCategory),
           ),
-          body: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Hero(
-                  tag: 'card_${currentCategory.id}',
-                  child: Material( // Hero needs Material to avoid text style issues during flight
-                    color: Colors.transparent,
-                    child: Text(
-                      currentCategory.name,
-                      style: GoogleFonts.nunito(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Color(currentCategory.textColor),
-                      ),
-                    ),
+          IconButton(
+            icon: Icon(Icons.delete, color: Color(currentCategory.textColor)),
+            onPressed: () => _confirmDelete(context, ref, currentCategory.id),
+          ),
+        ],
+      ),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Hero(
+              tag: 'card_${currentCategory.id}',
+              child: Material( // Hero needs Material to avoid text style issues during flight
+                color: Colors.transparent,
+                child: Text(
+                  currentCategory.name,
+                  style: GoogleFonts.nunito(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: Color(currentCategory.textColor),
                   ),
                 ),
               ),
-              Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).scaffoldBackgroundColor,
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                  ),
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: currentCategory.expenses.length + 1, // +1 for spacer or header
-                    itemBuilder: (context, index) {
-                      if (index == 0) {
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 16),
-                          child: Text(
-                            'Expense History',
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                          ),
-                        );
-                      }
-                      final expense = currentCategory.expenses[index - 1];
-                      return Dismissible(
+            ),
+          ),
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).scaffoldBackgroundColor,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+              ),
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: currentCategory.expenses.length + 1, // +1 for spacer or header
+                itemBuilder: (context, index) {
+                  if (index == 0) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Text(
+                        'Expense History',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                    );
+                  }
+                  final expense = currentCategory.expenses[index - 1];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Slidable(
                         key: Key(expense.id),
-                        direction: DismissDirection.endToStart,
-                        background: Container(
-                          alignment: Alignment.centerRight,
-                          padding: const EdgeInsets.only(right: 20),
-                          color: Colors.red,
-                          child: const Icon(Icons.delete, color: Colors.white),
+                        endActionPane: ActionPane(
+                          motion: const ScrollMotion(),
+                          extentRatio: 0.35, // Reduced width for 2 buttons
+                          children: [
+                            SlidableAction(
+                              onPressed: (context) => _showEditExpenseDialog(context, ref, expense),
+                              backgroundColor: Colors.teal.shade300, // Pastel Teal
+                              foregroundColor: Colors.white,
+                              icon: Icons.edit_rounded,
+                              borderRadius: const BorderRadius.horizontal(left: Radius.circular(16)),
+                            ),
+                            SlidableAction(
+                              onPressed: (context) => _confirmDeleteExpense(context, ref, expense.id),
+                              backgroundColor: Colors.redAccent.shade100, // Pastel Coral/Red
+                              foregroundColor: Colors.white,
+                              icon: Icons.delete_rounded,
+                              borderRadius: const BorderRadius.horizontal(right: Radius.circular(16)),
+                            ),
+                          ],
                         ),
-                        onDismissed: (_) {
-                          ref.read(categoriesProvider.notifier).deleteExpense(expense.id);
-                        },
                         child: Card(
                           elevation: 0,
                           color: Theme.of(context).cardColor,
-                          margin: const EdgeInsets.only(bottom: 8),
+                          margin: EdgeInsets.zero, // Margin handled by parent Padding for clean slide
                           child: ListTile(
                             title: Text(
                               expense.note.isEmpty ? 'Expense' : expense.note,
@@ -123,48 +153,47 @@ class CardDetailScreen extends ConsumerWidget {
                             ),
                             subtitle: Text(dateFormat.format(expense.date)),
                             trailing: Text(
-                              currencyFormat.format(expense.amount),
+                              CurrencyFormatter.format(expense.amount),
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
-                                color: Theme.of(context).primaryColor, // Use theme primary (yellow) or text color
+                                color: Theme.of(context).primaryColor, 
                               ),
                             ),
                           ),
                         ),
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ],
-          ),
-          floatingActionButton: FloatingActionButton.extended(
-            onPressed: () {
-               showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  builder: (context) => Padding(
-                      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-                      child: QuickAddDialog(category: currentCategory)
-                  ),
-                );
-            },
-            label: Text(
-              'Add Expense',
-              style: GoogleFonts.nunito(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
+                      ),
+                    );
+                },
               ),
             ),
-            icon: const Icon(Icons.add),
-            backgroundColor: Color(currentCategory.textColor),
-            foregroundColor: Color(currentCategory.backgroundColor),
-            elevation: 4,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)), // Pill shape
           ),
-        );
-      },
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+           showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              builder: (context) => Padding(
+                  padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+                  child: QuickAddDialog(category: currentCategory)
+              ),
+            );
+        },
+        label: Text(
+          'Add Expense',
+          style: GoogleFonts.nunito(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
+        icon: const Icon(Icons.add),
+        backgroundColor: Color(currentCategory.textColor),
+        foregroundColor: Color(currentCategory.backgroundColor),
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)), // Pill shape
+      ),
     );
   }
 
@@ -356,8 +385,9 @@ class CardDetailScreen extends ConsumerWidget {
                         name: nameController.text,
                         backgroundColor: selectedColor.toARGB32(),
                         textColor: textColor.toARGB32(),
+                        type: category.type, // Ensure type is preserved
                       );
-                      ref.read(categoriesProvider.notifier).updateCategory(updated);
+                      ref.read(categoriesProvider(category.type).notifier).updateCategory(updated);
                       Navigator.pop(context);
                     },
                     style: FilledButton.styleFrom(
@@ -389,12 +419,106 @@ class CardDetailScreen extends ConsumerWidget {
             ),
             FilledButton(
               style: FilledButton.styleFrom(backgroundColor: Colors.red),
-              onPressed: () {
-                ref.read(categoriesProvider.notifier).deleteCategory(categoryId);
-                Navigator.pop(context); // Close dialog
-                Navigator.pop(context); // Close screen
+              onPressed: () async {
+                // Delete: Await full deletion process
+                await ref.read(categoriesProvider(widget.category.type).notifier).deleteCategory(categoryId);
+                
+                if (context.mounted) {
+                  Navigator.pop(context); // Close dialog
+                  if (context.mounted) {
+                     Navigator.pop(context); // Close screen
+                  }
+                }
               },
               child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+  void _confirmDeleteExpense(BuildContext context, WidgetRef ref, String expenseId) {
+     showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Delete Expense?'),
+          content: const Text('This action cannot be undone.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              onPressed: () {
+                ref.read(categoriesProvider(widget.category.type).notifier).deleteExpense(expenseId);
+                Navigator.pop(context);
+              },
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showEditExpenseDialog(BuildContext context, WidgetRef ref, ExpenseModel expense) {
+    // Basic clean up of non-numeric chars for the input field, though user might want to see them?
+    // Let's just strip ' đ' and dots if we want raw number editing, or keep it simple.
+    // For now, let's just use the raw amount from the model.
+    final amountController = TextEditingController(text: expense.amount.toInt().toString());
+    final noteController = TextEditingController(text: expense.note);
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Edit Expense'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: amountController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Amount',
+                  suffixText: 'đ',
+                ),
+                autofocus: true,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: noteController,
+                decoration: const InputDecoration(
+                  labelText: 'Note',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                 final newAmount = double.tryParse(amountController.text) ?? expense.amount;
+                 final newNote = noteController.text;
+                 
+                 final updatedExpense = ExpenseModel(
+                   id: expense.id,
+                   amount: newAmount,
+                   note: newNote,
+                   date: expense.date,
+                   categoryId: expense.categoryId,
+                   bankSource: expense.bankSource
+                 );
+                 
+                 ref.read(categoriesProvider(widget.category.type).notifier).updateExpense(updatedExpense);
+                 Navigator.pop(context);
+              },
+              child: const Text('Save'),
             ),
           ],
         );

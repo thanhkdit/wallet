@@ -4,7 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:uuid/uuid.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
+
+import '../utils/currency_formatter.dart';
 import '../providers/providers.dart';
 import '../data/models/category_model.dart';
 import '../widgets/expense_card.dart';
@@ -13,7 +14,8 @@ import '../widgets/month_selector.dart';
 import '../theme/app_theme.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
-  const DashboardScreen({super.key});
+  final CategoryType type;
+  const DashboardScreen({super.key, this.type = CategoryType.expense});
 
   @override
   ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
@@ -59,7 +61,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             return GestureDetector(
               onTap: () => FocusScope.of(context).unfocus(), // Hide keyboard on tap
               child: AlertDialog(
-                title: const Text('New Category'),
+                title: Text(widget.type == CategoryType.income ? 'New Income Source' : 'New Category'),
                 content: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch, // Stretch children to fill dialog width
@@ -147,34 +149,34 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
                           // Shades (Wrap Layout)
                           Wrap(
-                             spacing: 12,
-                             runSpacing: 12,
-                             children: AppTheme.getShades(selectedBaseColor).map((shadeColor) {
-                               final isSelected = selectedColor.toARGB32() == shadeColor.toARGB32();
-                               return GestureDetector(
-                                 onTap: () {
-                                   setState(() {
-                                     selectedColor = shadeColor;
-                                     textColor = AppTheme.getContrastTextColor(selectedColor);
-                                   });
-                                 },
-                                 child: AnimatedContainer(
-                                   duration: const Duration(milliseconds: 200),
-                                   width: 40,
-                                   height: 40,
-                                   decoration: BoxDecoration(
-                                     color: shadeColor,
-                                     shape: BoxShape.circle,
-                                     border: isSelected 
-                                       ? Border.all(color: AppTheme.textColor, width: 2.5) 
-                                       : Border.all(color: Colors.grey.withValues(alpha: 0.1), width: 1),
-                                   ),
-                                   child: isSelected 
-                                     ? Icon(Icons.check, size: 20, color: textColor)
-                                     : null,
-                                 ),
-                               );
-                             }).toList(),
+                              spacing: 12,
+                              runSpacing: 12,
+                              children: AppTheme.getShades(selectedBaseColor).map((shadeColor) {
+                                final isSelected = selectedColor.toARGB32() == shadeColor.toARGB32();
+                                return GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      selectedColor = shadeColor;
+                                      textColor = AppTheme.getContrastTextColor(selectedColor);
+                                    });
+                                  },
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 200),
+                                    width: 40,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      color: shadeColor,
+                                      shape: BoxShape.circle,
+                                      border: isSelected 
+                                        ? Border.all(color: AppTheme.textColor, width: 2.5) 
+                                        : Border.all(color: Colors.grey.withValues(alpha: 0.1), width: 1),
+                                    ),
+                                    child: isSelected 
+                                      ? Icon(Icons.check, size: 20, color: textColor)
+                                      : null,
+                                  ),
+                                );
+                              }).toList(),
                           ),
 
                           const SizedBox(height: 24),
@@ -217,8 +219,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         backgroundColor: selectedColor.toARGB32(),
                         textColor: textColor.toARGB32(),
                         sortOrder: 999, // Will be last
+                        type: widget.type,
                       );
-                      ref.read(categoriesProvider.notifier).addCategory(newCategory);
+                      ref.read(categoriesProvider(widget.type).notifier).addCategory(newCategory);
                       Navigator.pop(context);
                     }
                   },
@@ -249,6 +252,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               const Text('Grid Layout', style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 12),
               const ColumnToggle(),
+              const SizedBox(height: 20),
+
+
             ],
           ),
           actions: [
@@ -264,7 +270,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final categoriesAsync = ref.watch(categoriesProvider);
+    final categoriesAsync = ref.watch(categoriesProvider(widget.type));
     final columnCount = ref.watch(columnCountProvider);
 
     return Scaffold(
@@ -284,7 +290,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       children: [
                         const SizedBox(width: 48), // Spacer to center title (approximate)
                         Text(
-                          'Thành tiêu tiền',
+                          widget.type == CategoryType.income ? 'Thu nhập' : 'Thành tiêu tiền',
                           style: GoogleFonts.nunito(
                             fontSize: 28, // Large
                             fontWeight: FontWeight.w800,
@@ -347,18 +353,49 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     // Assuming 'vi' locale or custom pattern for dots
                     // but using a standard pattern with comma for now, user asked format "41.000.000"
                     // which is Vietnamese/German style. I will use a custom pattern.
-                    // Thousands separator formatter (Safe version)
-                    // Using en_US (reliable) and replacing commas with dots to match user preference "41.000.000"
-                    final currencyFormat = NumberFormat.currency(locale: 'en_US', symbol: '', decimalDigits: 0);
-                    String formatCurrency(double amount) {
-                      return currencyFormat.format(amount).replaceAll(',', '.');
-                    }
+
 
                     return Column(
                       children: [
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
-                          child: Row(
+                          child: widget.type == CategoryType.income 
+                          ? Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.2)),
+                              ),
+                              child: Column(
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text('Income:', style: GoogleFonts.nunito(color: AppTheme.secretGrey)),
+                                      Text(CurrencyFormatter.format(ref.watch(balanceProvider).income), style: GoogleFonts.nunito(fontWeight: FontWeight.bold, color: Colors.green)),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text('Expenses:', style: GoogleFonts.nunito(color: AppTheme.secretGrey)),
+                                      Text(CurrencyFormatter.format(ref.watch(balanceProvider).expense), style: GoogleFonts.nunito(fontWeight: FontWeight.bold, color: Colors.red)),
+                                    ],
+                                  ),
+                                  const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider()),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text('Balance:', style: GoogleFonts.nunito(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textColor)),
+                                      Text(CurrencyFormatter.format(ref.watch(balanceProvider).balance), style: GoogleFonts.nunito(fontSize: 20, fontWeight: FontWeight.w800, color: AppTheme.primaryColor)),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            )
+                          : Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
@@ -371,7 +408,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                               ),
                               Text(
                                 // Manually formatting if needed or using correct locale
-                                '\$${formatCurrency(totalSpent)}',
+                                CurrencyFormatter.format(totalSpent),
                                 style: GoogleFonts.nunito(
                                   fontSize: 24,
                                   fontWeight: FontWeight.w800,
@@ -416,7 +453,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                     newCategories[droppedIndex] = newCategories[targetIndex];
                                     newCategories[targetIndex] = temp;
                                     
-                                    ref.read(categoriesProvider.notifier).reorderCategories(newCategories);
+                                    ref.read(categoriesProvider(widget.type).notifier).reorderCategories(newCategories);
                                   },
                                   builder: (context, candidateData, rejectedData) {
                                     return ExpenseCard(category: category);

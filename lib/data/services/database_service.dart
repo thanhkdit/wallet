@@ -1,5 +1,5 @@
-
 import 'package:hive_flutter/hive_flutter.dart';
+
 import '../models/category_model.dart';
 import '../models/expense_model.dart';
 
@@ -9,14 +9,17 @@ class DatabaseService {
 
   late Box<CategoryModel> _categoriesBox;
   late Box<ExpenseModel> _expensesBox;
+  late Box _settingsBox;
 
   Future<void> init() async {
     await Hive.initFlutter();
     Hive.registerAdapter(CategoryModelAdapter());
+    Hive.registerAdapter(CategoryTypeAdapter());
     Hive.registerAdapter(ExpenseModelAdapter());
 
     _categoriesBox = await Hive.openBox<CategoryModel>(_categoriesBoxName);
     _expensesBox = await Hive.openBox<ExpenseModel>(_expensesBoxName);
+    _settingsBox = await Hive.openBox('settings');
   }
 
   // Categories
@@ -58,6 +61,7 @@ class DatabaseService {
             backgroundColor: cat.backgroundColor,
             textColor: cat.textColor,
             sortOrder: i,
+            type: cat.type,
             expenses: [] // Expenses are runtime
         );
         await _categoriesBox.put(cat.id, newCat);
@@ -79,16 +83,21 @@ class DatabaseService {
     await _expensesBox.delete(id);
   }
 
+  Future<void> updateExpense(ExpenseModel expense) async {
+    await _expensesBox.put(expense.id, expense);
+  }
+
   // Aggregation
-  List<CategoryModel> getCategoriesWithExpenses(DateTime month) {
+  // Aggregation
+  List<CategoryModel> getCategoriesWithExpenses(DateTime month, {CategoryType type = CategoryType.expense}) {
     // Legacy support: construct a range for the month
     final start = DateTime(month.year, month.month, 1);
     final end = DateTime(month.year, month.month + 1, 0, 23, 59, 59); // End of month
-    return getCategoriesWithExpensesInRange(start, end);
+    return getCategoriesWithExpensesInRange(start, end, type: type);
   }
 
-  List<CategoryModel> getCategoriesWithExpensesInRange(DateTime start, DateTime end) {
-    final categories = _categoriesBox.values.toList();
+  List<CategoryModel> getCategoriesWithExpensesInRange(DateTime start, DateTime end, {CategoryType type = CategoryType.expense}) {
+    final categories = _categoriesBox.values.where((c) => c.type == type).toList();
     final expenses = _expensesBox.values.toList();
 
     // Map expenses to categories, filtering by date range
@@ -106,4 +115,15 @@ class DatabaseService {
     }).toList()
       ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
   }
+
+  // Onboarding
+  bool isOnboardingComplete() {
+    return _settingsBox.get('onboarding_complete', defaultValue: false) ?? false;
+  }
+
+  Future<void> completeOnboarding() async {
+    await _settingsBox.put('onboarding_complete', true);
+  }
+
+
 }

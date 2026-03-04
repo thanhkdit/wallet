@@ -20,11 +20,15 @@ class ExpenseModel extends HiveObject {
   @HiveField(4)
   final DateTime date;
 
+  @HiveField(5)
+  final String? bankSource;
+
   ExpenseModel({
     required this.id,
     required this.categoryId,
     required this.amount,
     required this.note,
     required this.date,
+    this.bankSource,
   });
 }

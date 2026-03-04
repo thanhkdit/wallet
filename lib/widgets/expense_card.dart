@@ -1,7 +1,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
+
+import '../utils/currency_formatter.dart';
 import '../data/models/category_model.dart';
 import '../screens/card_detail_screen.dart';
 import 'quick_add_dialog.dart';
@@ -64,11 +65,7 @@ class _ExpenseCardState extends State<ExpenseCard> with SingleTickerProviderStat
     final scale = 1.0 - _controller.value;
     final total = ((widget.category.expenses as List<dynamic>?) ?? []).fold(0.0, (sum, item) => sum + (item as dynamic).amount);
     
-    // Safe formatter: en_US pattern with dots for thousands
-    final currencyFormatter = NumberFormat.currency(locale: 'en_US', symbol: '', decimalDigits: 0);
-    String formatCurrency(double amount) {
-      return currencyFormatter.format(amount).replaceAll(',', '.');
-    } 
+ 
 
     final bgColor = Color(widget.category.backgroundColor);
     final textColor = Color(widget.category.textColor);
@@ -149,7 +146,7 @@ class _ExpenseCardState extends State<ExpenseCard> with SingleTickerProviderStat
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                formatCurrency(e.amount),
+                                CurrencyFormatter.format(e.amount),
                                 style: GoogleFonts.nunito(
                                   fontSize: 13,
                                   fontWeight: FontWeight.bold,
@@ -191,7 +188,7 @@ class _ExpenseCardState extends State<ExpenseCard> with SingleTickerProviderStat
                               ),
                             ),
                             Text(
-                              formatCurrency(total),
+                              CurrencyFormatter.format(total),
                               style: GoogleFonts.nunito(
                                 fontSize: 22,
                                 fontWeight: FontWeight.w900, // Extra bold

@@ -22,13 +22,14 @@ class CategoryModelAdapter extends TypeAdapter<CategoryModel> {
       backgroundColor: fields[2] as int,
       textColor: fields[3] as int,
       sortOrder: fields[4] as int,
+      type: fields[5] as CategoryType,
     );
   }
 
   @override
   void write(BinaryWriter writer, CategoryModel obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(6)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -38,7 +39,9 @@ class CategoryModelAdapter extends TypeAdapter<CategoryModel> {
       ..writeByte(3)
       ..write(obj.textColor)
       ..writeByte(4)
-      ..write(obj.sortOrder);
+      ..write(obj.sortOrder)
+      ..writeByte(5)
+      ..write(obj.type);
   }
 
   @override
@@ -48,6 +51,45 @@ class CategoryModelAdapter extends TypeAdapter<CategoryModel> {
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is CategoryModelAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+class CategoryTypeAdapter extends TypeAdapter<CategoryType> {
+  @override
+  final int typeId = 2;
+
+  @override
+  CategoryType read(BinaryReader reader) {
+    switch (reader.readByte()) {
+      case 0:
+        return CategoryType.expense;
+      case 1:
+        return CategoryType.income;
+      default:
+        return CategoryType.expense;
+    }
+  }
+
+  @override
+  void write(BinaryWriter writer, CategoryType obj) {
+    switch (obj) {
+      case CategoryType.expense:
+        writer.writeByte(0);
+        break;
+      case CategoryType.income:
+        writer.writeByte(1);
+        break;
+    }
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CategoryTypeAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }

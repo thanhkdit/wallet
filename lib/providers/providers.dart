@@ -5,6 +5,7 @@ import '../data/models/category_model.dart';
 import '../data/models/expense_model.dart';
 import '../data/services/database_service.dart';
 
+
 final databaseServiceProvider = Provider<DatabaseService>((ref) {
   return DatabaseService();
 });
@@ -48,19 +49,22 @@ final selectedMonthProvider = Provider<DateTime>((ref) {
   return ref.watch(dateFilterProvider).selectedDate;
 });
 
+
+
 final columnCountProvider = StateProvider<int>((ref) => 2);
 
-final categoriesProvider = StateNotifierProvider<CategoriesNotifier, AsyncValue<List<CategoryModel>>>((ref) {
+final categoriesProvider = StateNotifierProvider.family<CategoriesNotifier, AsyncValue<List<CategoryModel>>, CategoryType>((ref, type) {
   final dbService = ref.watch(databaseServiceProvider);
   final filterState = ref.watch(dateFilterProvider);
-  return CategoriesNotifier(dbService, filterState);
+  return CategoriesNotifier(dbService, filterState, type);
 });
 
 class CategoriesNotifier extends StateNotifier<AsyncValue<List<CategoryModel>>> {
   final DatabaseService _dbService;
   final DateFilterState _filterState;
+  final CategoryType _type;
 
-  CategoriesNotifier(this._dbService, this._filterState) : super(const AsyncValue.loading()) {
+  CategoriesNotifier(this._dbService, this._filterState, this._type) : super(const AsyncValue.loading()) {
     loadCategories();
   }
 
@@ -70,18 +74,18 @@ class CategoriesNotifier extends StateNotifier<AsyncValue<List<CategoryModel>>> 
       
       switch (_filterState.mode) {
         case DateFilterMode.month:
-          categories = _dbService.getCategoriesWithExpenses(_filterState.selectedDate);
+          categories = _dbService.getCategoriesWithExpenses(_filterState.selectedDate, type: _type);
           break;
         case DateFilterMode.year:
           final start = DateTime(_filterState.selectedDate.year, 1, 1);
           final end = DateTime(_filterState.selectedDate.year, 12, 31, 23, 59, 59);
-          categories = _dbService.getCategoriesWithExpensesInRange(start, end);
+          categories = _dbService.getCategoriesWithExpensesInRange(start, end, type: _type);
           break;
         case DateFilterMode.custom:
           if (_filterState.customRange != null) {
             final start = _filterState.customRange!.start;
             final end = _filterState.customRange!.end.add(const Duration(hours: 23, minutes: 59, seconds: 59));
-            categories = _dbService.getCategoriesWithExpensesInRange(start, end);
+            categories = _dbService.getCategoriesWithExpensesInRange(start, end, type: _type);
           } else {
              // Fallback
              categories = [];
@@ -127,4 +131,27 @@ class CategoriesNotifier extends StateNotifier<AsyncValue<List<CategoryModel>>> 
     await _dbService.deleteExpense(id);
     await loadCategories();
   }
+
+  Future<void> updateExpense(ExpenseModel expense) async {
+    await _dbService.updateExpense(expense);
+    await loadCategories();
+  }
 }
+
+// Balance Provider
+final balanceProvider = Provider<({double income, double expense, double balance})>((ref) {
+  final incomeCategories = ref.watch(categoriesProvider(CategoryType.income)).asData?.value ?? [];
+  final expenseCategories = ref.watch(categoriesProvider(CategoryType.expense)).asData?.value ?? [];
+
+  final totalIncome = incomeCategories.fold<double>(
+      0, (sum, cat) => sum + cat.expenses.fold(0, (s, e) => s + e.amount));
+
+  final totalExpense = expenseCategories.fold<double>(
+      0, (sum, cat) => sum + cat.expenses.fold(0, (s, e) => s + e.amount));
+
+  return (
+    income: totalIncome,
+    expense: totalExpense,
+    balance: totalIncome - totalExpense,
+  );
+});

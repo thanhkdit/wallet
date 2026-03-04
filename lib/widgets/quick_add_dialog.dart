@@ -40,7 +40,7 @@ class _QuickAddDialogState extends ConsumerState<QuickAddDialog> {
         date: DateTime.now(),
       );
 
-      ref.read(categoriesProvider.notifier).addExpense(expense);
+      ref.read(categoriesProvider(widget.category.type).notifier).addExpense(expense);
       Navigator.pop(context);
     }
   }
