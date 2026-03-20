@@ -290,7 +290,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       children: [
                         const SizedBox(width: 48), // Spacer to center title (approximate)
                         Text(
-                          widget.type == CategoryType.income ? 'Thu nhập' : 'Thành tiêu tiền',
+                          widget.type == CategoryType.income ? 'Thành thu tiền' : 'Thành tiêu tiền',
                           style: GoogleFonts.nunito(
                             fontSize: 28, // Large
                             fontWeight: FontWeight.w800,

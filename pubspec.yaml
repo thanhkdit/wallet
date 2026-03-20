@@ -48,8 +48,10 @@ dependencies:
     sdk: flutter
   flutter_slidable: ^4.0.3
   google_sign_in: ^7.2.0
+  google_sign_in_web: ^1.1.0
   googleapis: ^15.0.0
   extension_google_sign_in_as_googleapis_auth: ^3.0.0
+  shared_preferences: ^2.5.3
 
 dev_dependencies:
   flutter_test:

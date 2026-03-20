@@ -1,13 +1,13 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'data/services/database_service.dart';
 import 'providers/providers.dart';
+import 'providers/sync_provider.dart';
 import 'theme/app_theme.dart';
 import 'screens/main_screen.dart';
 import 'screens/onboarding_screen.dart';
-
+import 'services/google_drive_service.dart';
 
 
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -21,6 +21,9 @@ void main() async {
   // Initialize Database
   final databaseService = DatabaseService();
   await databaseService.init();
+
+  // Initialize Google Drive Service
+  await GoogleDriveService().initialize();
 
   runApp(
     ProviderScope(
@@ -48,7 +51,14 @@ class _AntigravityNoteAppState extends ConsumerState<AntigravityNoteApp> {
   @override
   void initState() {
     super.initState();
-
+    // Trigger weekly auto-sync check after first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final syncNotifier = ref.read(syncProvider.notifier);
+      syncNotifier.attemptWeeklyAutoSync();
+      
+      // Also trigger the lazy background weekly sync if the user is already authenticated silently
+      GoogleDriveService().checkAndSyncWeekly(() => syncNotifier.exportLocalData());
+    });
   }
 
   @override

@@ -1,9 +1,9 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import 'dashboard_screen.dart';
+import 'sync_screen.dart';
 import '../data/models/category_model.dart';
 
 
@@ -25,6 +25,8 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     const DashboardScreen(type: CategoryType.expense),
     // Income Dashboard (Reuse same screen but filtered)
     const DashboardScreen(type: CategoryType.income),
+    // Sync Settings
+    const SyncScreen(),
   ];
 
   @override
@@ -54,6 +56,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
               children: [
                 _buildNavItem(0, 'Expenses', Icons.account_balance_wallet_outlined, Icons.account_balance_wallet),
                 _buildNavItem(1, 'Income', Icons.savings_outlined, Icons.savings),
+                _buildNavItem(2, 'Sync', Icons.cloud_sync_outlined, Icons.cloud_sync),
               ],
             ),
           ),
