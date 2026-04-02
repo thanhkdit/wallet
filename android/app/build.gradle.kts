@@ -6,9 +6,9 @@ plugins {
 }
 
 android {
-    namespace = "com.antigravity.antigravity_note"
-    compileSdk = 35
-    ndkVersion = "27.0.12077973"
+    namespace = "com.antigravity.wallnote"
+    compileSdk = 36
+    ndkVersion = "29.0.13846066"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -21,9 +21,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.antigravity.antigravity_note"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        applicationId = "com.antigravity.wallnote"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

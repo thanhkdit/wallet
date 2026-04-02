@@ -1,4 +1,4 @@
-package com.antigravity.antigravity_note
+package com.antigravity.wallnote
 
 import io.flutter.embedding.android.FlutterActivity
 

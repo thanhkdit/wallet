@@ -1,12 +1,9 @@
-
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-
 import '../utils/currency_formatter.dart';
 import '../data/models/category_model.dart';
 import '../screens/card_detail_screen.dart';
 import 'quick_add_dialog.dart';
-
 
 class ExpenseCard extends StatefulWidget {
   final CategoryModel category;
@@ -19,7 +16,6 @@ class ExpenseCard extends StatefulWidget {
 
 class _ExpenseCardState extends State<ExpenseCard> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  // Removed unused _scaleAnimation
 
   @override
   void initState() {
@@ -28,10 +24,10 @@ class _ExpenseCardState extends State<ExpenseCard> with SingleTickerProviderStat
       vsync: this,
       duration: const Duration(milliseconds: 150),
       lowerBound: 0.0,
-      upperBound: 0.05, // Reduced scale effect for subtlety
+      upperBound: 0.05,
     )..addListener(() {
-        setState(() {});
-      });
+      setState(() {});
+    });
   }
 
   @override
@@ -64,8 +60,6 @@ class _ExpenseCardState extends State<ExpenseCard> with SingleTickerProviderStat
   Widget build(BuildContext context) {
     final scale = 1.0 - _controller.value;
     final total = ((widget.category.expenses as List<dynamic>?) ?? []).fold(0.0, (sum, item) => sum + (item as dynamic).amount);
-    
- 
 
     final bgColor = Color(widget.category.backgroundColor);
     final textColor = Color(widget.category.textColor);
@@ -79,14 +73,15 @@ class _ExpenseCardState extends State<ExpenseCard> with SingleTickerProviderStat
         child: Hero(
           tag: 'card_${widget.category.id}',
           child: Container(
+            constraints: const BoxConstraints(minHeight: 180),
             decoration: BoxDecoration(
               color: bgColor,
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.5), width: 1.5), // Highlight border
+              border: Border.all(color: Colors.white.withValues(alpha: 0.5), width: 1.5),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.brown.withValues(alpha: 0.08), // Warmer, softer shadow
-                  blurRadius: 12, // Softer edges
+                  color: Colors.brown.withValues(alpha: 0.08),
+                  blurRadius: 12,
                   spreadRadius: 1,
                   offset: const Offset(0, 4),
                 ),
@@ -97,11 +92,11 @@ class _ExpenseCardState extends State<ExpenseCard> with SingleTickerProviderStat
                 Padding(
                   padding: const EdgeInsets.all(20.0),
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Header: Title
                       Padding(
-                        padding: const EdgeInsets.only(right: 40.0), // Space for button
+                        padding: const EdgeInsets.only(right: 40.0),
                         child: Text(
                           widget.category.name,
                           style: GoogleFonts.nunito(
@@ -109,71 +104,71 @@ class _ExpenseCardState extends State<ExpenseCard> with SingleTickerProviderStat
                             fontWeight: FontWeight.w800,
                             color: textColor,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      
+
                       const SizedBox(height: 16),
-                      
-                      // Body: List of recent items
+
                       Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: widget.category.expenses.take(3).map((e) => Padding(
-                          padding: const EdgeInsets.only(bottom: 6.0),
+                          padding: const EdgeInsets.only(bottom: 10.0),
                           child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Container(
-                                width: 4, 
-                                height: 4, 
-                                decoration: BoxDecoration(
-                                  color: textColor.withValues(alpha: 0.4),
-                                  shape: BoxShape.circle
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8.0),
+                                child: Container(
+                                  width: 4,
+                                  height: 4,
+                                  decoration: BoxDecoration(
+                                      color: textColor.withValues(alpha: 0.4),
+                                      shape: BoxShape.circle
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 8),
                               Expanded(
-                                child: Text(
-                                  e.note.isEmpty ? 'Expense' : e.note,
-                                  style: GoogleFonts.nunito(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: textColor.withValues(alpha: 0.7),
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                CurrencyFormatter.format(e.amount),
-                                style: GoogleFonts.nunito(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: textColor.withValues(alpha: 0.8),
+                                child: Wrap(
+                                  alignment: WrapAlignment.spaceBetween,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  runSpacing: 4,
+                                  children: [
+                                    Text(
+                                      e.note.isEmpty ? 'Expense' : e.note,
+                                      style: GoogleFonts.nunito(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: textColor.withValues(alpha: 0.7),
+                                      ),
+                                    ),
+                                    Text(
+                                      CurrencyFormatter.format(e.amount),
+                                      style: GoogleFonts.nunito(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                        color: textColor.withValues(alpha: 0.8),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
                         )).toList(),
                       ),
-                      
+
                       if (widget.category.expenses.length > 3)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 2.0, bottom: 8.0),
-                          child: Text(
-                            '+ ${widget.category.expenses.length - 3} more',
-                            style: GoogleFonts.nunito(
-                              fontSize: 12,
-                              fontStyle: FontStyle.italic,
-                              color: textColor.withValues(alpha: 0.5),
-                            ),
+                        Text(
+                          '+ ${widget.category.expenses.length - 3} more',
+                          style: GoogleFonts.nunito(
+                            fontSize: 12,
+                            fontStyle: FontStyle.italic,
+                            color: textColor.withValues(alpha: 0.5),
                           ),
                         ),
 
                       const SizedBox(height: 16),
 
-                      // Footer: Total
                       Align(
                         alignment: Alignment.bottomRight,
                         child: Column(
@@ -187,12 +182,19 @@ class _ExpenseCardState extends State<ExpenseCard> with SingleTickerProviderStat
                                 color: textColor.withValues(alpha: 0.6),
                               ),
                             ),
-                            Text(
-                              CurrencyFormatter.format(total),
-                              style: GoogleFonts.nunito(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w900, // Extra bold
-                                color: textColor,
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 200),
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerRight,
+                                child: Text(
+                                  CurrencyFormatter.format(total),
+                                  style: GoogleFonts.nunito(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w900,
+                                    color: textColor,
+                                  ),
+                                ),
                               ),
                             ),
                           ],
@@ -201,8 +203,8 @@ class _ExpenseCardState extends State<ExpenseCard> with SingleTickerProviderStat
                     ],
                   ),
                 ),
-                
-                // Floating Action Button Style "Quick Add"
+
+                // Nút Quick Add
                 Positioned(
                   top: 12,
                   right: 12,
@@ -212,15 +214,12 @@ class _ExpenseCardState extends State<ExpenseCard> with SingleTickerProviderStat
                     clipBehavior: Clip.antiAlias,
                     child: InkWell(
                       onTap: () {
-                         showModalBottomSheet(
-                            context: context,
-                            isScrollControlled: true,
-                            backgroundColor: Colors.transparent, // Important for rounded corners on dialog
-                            builder: (context) => Padding(
-                                padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-                                child: QuickAddDialog(category: widget.category)
-                            ),
-                          );
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (context) => QuickAddDialog(category: widget.category),
+                        );
                       },
                       child: Padding(
                         padding: const EdgeInsets.all(8.0),

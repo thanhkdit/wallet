@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../utils/currency_formatter.dart';
 import '../providers/providers.dart';
 import '../data/models/category_model.dart';
+import '../widgets/AddCategorySheet.dart';
 import '../widgets/expense_card.dart';
 import '../widgets/column_toggle.dart';
 import '../widgets/month_selector.dart';
@@ -44,225 +45,178 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   void _addNewCategory() {
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      barrierDismissible: false, // Prevent closing when tapping outside
-      builder: (context) {
-        final controller = TextEditingController();
-        Color selectedBaseColor = AppTheme.baseColors[0]; // Light Yellow
-        // Default to the base color itself (which is index 0 of shades usually if logic aligns, 
-        // but our getShades generates new ones. Let's pick a nice middle-light shade or just the base itself if it's in the list.
-        // Actually, let's pick the 2nd or 3rd shade which is usually the "nice" color.
-        Color selectedColor = AppTheme.baseColors[0]; 
-        Color textColor = AppTheme.getContrastTextColor(selectedColor);
-
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return GestureDetector(
-              onTap: () => FocusScope.of(context).unfocus(), // Hide keyboard on tap
-              child: AlertDialog(
-                title: Text(widget.type == CategoryType.income ? 'New Income Source' : 'New Category'),
-                content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch, // Stretch children to fill dialog width
-                children: [
-                  TextField(
-                    controller: controller,
-                    autofocus: true,
-                    style: GoogleFonts.nunito(fontSize: 18),
-                    decoration: InputDecoration(
-                      labelText: 'Category Name',
-                      labelStyle: GoogleFonts.nunito(color: AppTheme.secretGrey),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(color: AppTheme.secretGrey.withValues(alpha: 0.3)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: AppTheme.primaryColor, width: 2),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  Flexible(
-                    child: SingleChildScrollView(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          // Aesthetic Color Picker (Wrap Layout)
-                          // Base Colors
-                          Wrap(
-                            spacing: 12,
-                            runSpacing: 12,
-                            children: AppTheme.baseColors.map((baseColor) {
-                              final isBaseSelected = AppTheme.isSameBaseColor(selectedBaseColor, baseColor);
-                              return GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    selectedBaseColor = baseColor;
-                                    // Auto-select a nice mid-tone (index 4 out of 10)
-                                    final shades = AppTheme.getShades(baseColor);
-                                    selectedColor = shades[4]; 
-                                    textColor = AppTheme.getContrastTextColor(selectedColor);
-                                  });
-                                },
-                                child: Container(
-                                  width: 40,
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    color: baseColor,
-                                    shape: BoxShape.circle,
-                                    border: isBaseSelected 
-                                      ? Border.all(color: AppTheme.textColor, width: 2.5)
-                                      : Border.all(color: Colors.grey.withValues(alpha: 0.1), width: 1),
-                                      boxShadow: [
-                                        if (isBaseSelected)
-                                          BoxShadow(
-                                            color: baseColor.withValues(alpha: 0.4),
-                                            blurRadius: 6,
-                                            offset: const Offset(0, 3)
-                                          )
-                                      ]
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                          ),
-
-                          const SizedBox(height: 20),
-
-                          // Modern Separator
-                          Row(
-                            children: [
-                              Expanded(child: Divider(color: AppTheme.secretGrey.withValues(alpha: 0.1))),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
-                                child: Icon(Icons.palette_outlined, size: 16, color: AppTheme.secretGrey.withValues(alpha: 0.5)),
-                              ),
-                              Expanded(child: Divider(color: AppTheme.secretGrey.withValues(alpha: 0.1))),
-                            ],
-                          ),
-
-                          const SizedBox(height: 20),
-
-                          // Shades (Wrap Layout)
-                          Wrap(
-                              spacing: 12,
-                              runSpacing: 12,
-                              children: AppTheme.getShades(selectedBaseColor).map((shadeColor) {
-                                final isSelected = selectedColor.toARGB32() == shadeColor.toARGB32();
-                                return GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      selectedColor = shadeColor;
-                                      textColor = AppTheme.getContrastTextColor(selectedColor);
-                                    });
-                                  },
-                                  child: AnimatedContainer(
-                                    duration: const Duration(milliseconds: 200),
-                                    width: 40,
-                                    height: 40,
-                                    decoration: BoxDecoration(
-                                      color: shadeColor,
-                                      shape: BoxShape.circle,
-                                      border: isSelected 
-                                        ? Border.all(color: AppTheme.textColor, width: 2.5) 
-                                        : Border.all(color: Colors.grey.withValues(alpha: 0.1), width: 1),
-                                    ),
-                                    child: isSelected 
-                                      ? Icon(Icons.check, size: 20, color: textColor)
-                                      : null,
-                                  ),
-                                );
-                              }).toList(),
-                          ),
-
-                          const SizedBox(height: 24),
-                          
-                          // Preview
-                          Container(
-                            width: double.maxFinite,
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: selectedColor,
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Text(
-                              controller.text.isEmpty ? 'Category Name' : controller.text,
-                              style: GoogleFonts.nunito(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: textColor, // Fixed color
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text('Cancel', style: GoogleFonts.nunito(color: AppTheme.secretGrey)),
-                ),
-                FilledButton(
-                  onPressed: () {
-                    if (controller.text.isNotEmpty) {
-                      final newCategory = CategoryModel(
-                        id: const Uuid().v4(),
-                        name: controller.text,
-                        backgroundColor: selectedColor.toARGB32(),
-                        textColor: textColor.toARGB32(),
-                        sortOrder: 999, // Will be last
-                        type: widget.type,
-                      );
-                      ref.read(categoriesProvider(widget.type).notifier).addCategory(newCategory);
-                      Navigator.pop(context);
-                    }
-                  },
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppTheme.primaryColor,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: Text('Add', style: GoogleFonts.nunito(fontWeight: FontWeight.bold)),
-                ),
-              ],
-            ),
-          );
-        }
-      );
-    },
-  );
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => AddCategorySheet(type: widget.type),
+    );
   }
 
   void _showSettingsDialog() {
-    showDialog(
+    showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      barrierColor: Colors.black.withValues(alpha: 0.5),
       builder: (context) {
-        return AlertDialog(
-          title: const Text('Settings'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('Grid Layout', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 12),
-              const ColumnToggle(),
-              const SizedBox(height: 20),
-
-
+        return Container(
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: BorderRadius.circular(32),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.15),
+                blurRadius: 30,
+                offset: const Offset(0, 10),
+              ),
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('Close', style: GoogleFonts.nunito(color: AppTheme.textColor)),
-            ),
-          ],
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppTheme.secretGrey.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Cài đặt hiển thị',
+                      style: GoogleFonts.nunito(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        color: AppTheme.textColor,
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: AppTheme.secretGrey.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.close_rounded, size: 20, color: AppTheme.secretGrey),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            AppTheme.primaryColor.withValues(alpha: 0.08),
+                            AppTheme.primaryColor.withValues(alpha: 0.02),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.1)),
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                                      blurRadius: 10,
+                                    )
+                                  ],
+                                ),
+                                child: const Icon(Icons.grid_view_rounded, size: 22, color: AppTheme.primaryColor),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Số cột lưới',
+                                      style: GoogleFonts.nunito(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w800,
+                                        color: AppTheme.textColor,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Thay đổi cách sắp xếp các thẻ',
+                                      style: GoogleFonts.nunito(
+                                        fontSize: 13,
+                                        color: AppTheme.secretGrey,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                          const ColumnToggle(),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 32),
+
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: FilledButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                      elevation: 8,
+                      shadowColor: AppTheme.primaryColor.withValues(alpha: 0.4),
+                    ),
+                    child: Text(
+                      'Lưu thay đổi',
+                      style: GoogleFonts.nunito(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         );
       },
     );
@@ -344,16 +298,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       );
                     }
 
-                    // Calculate total spent
-                    // Handle potential null expenses at runtime even if type says non-nullable
                     final totalSpent = categories.fold<double>(
                         0, (sum, cat) => sum + ((cat.expenses as List<dynamic>?) ?? []).fold<double>(0, (s, e) => s + (e as dynamic).amount));
-                    
-                    // Thousands separator formatter
-                    // Assuming 'vi' locale or custom pattern for dots
-                    // but using a standard pattern with comma for now, user asked format "41.000.000"
-                    // which is Vietnamese/German style. I will use a custom pattern.
-
 
                     return Column(
                       children: [

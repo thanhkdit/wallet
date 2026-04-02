@@ -1,4 +1,4 @@
-name: antigravity_note
+name: WallNote
 description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -40,7 +40,7 @@ dependencies:
   flutter_staggered_grid_view: ^0.7.0
   google_fonts: ^6.3.2
   uuid: ^4.5.2
-  intl: ^0.19.0
+  intl: ^0.20.2
   flex_color_picker: ^3.7.1
   flutter_launcher_icons: ^0.13.1
 
@@ -52,6 +52,8 @@ dependencies:
   googleapis: ^15.0.0
   extension_google_sign_in_as_googleapis_auth: ^3.0.0
   shared_preferences: ^2.5.3
+  gap: ^3.0.1
+  flutter_screenutil: ^5.9.3
 
 dev_dependencies:
   flutter_test:
@@ -65,6 +67,7 @@ dev_dependencies:
   flutter_lints: ^5.0.0
   hive_generator: ^2.0.1
   build_runner: ^2.5.4
+
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
