@@ -43,30 +43,28 @@ class GoogleDriveService {
 
   /// Initialize the service by checking for silent sign-in
   Future<void> initialize() async {
-    // 1. Initialize GoogleSignIn instance
-    await GoogleSignIn.instance.initialize(
-        serverClientId: '934155222240-st2sob8505vc7mbgm6uvfs5d018al253.apps.googleusercontent.com',
-    );
+    try {
+      // 1. Initialize GoogleSignIn instance
+      await GoogleSignIn.instance.initialize();
 
-    // 2. Listen to authentication events
-    _authSubscription ??= GoogleSignIn.instance.authenticationEvents.listen(
-      (GoogleSignInAuthenticationEvent event) async {
-        if (event is GoogleSignInAuthenticationEventSignIn) {
-          _currentUser = event.user;
-          isSignedInNotifier.value = true;
-          // Optionally auto-initialize drive API
-          await _initializeDriveApi();
-        } else if (event is GoogleSignInAuthenticationEventSignOut) {
-          _currentUser = null;
-          _driveApi = null;
-          isSignedInNotifier.value = false;
-        }
-      },
-      onError: (error) {
-        print('Authentication Error: $error');
-      },
-    );
-
+      // 2. Listen to authentication events
+      _authSubscription ??= GoogleSignIn.instance.authenticationEvents.listen(
+        (GoogleSignInAuthenticationEvent event) async {
+          if (event is GoogleSignInAuthenticationEventSignIn) {
+            _currentUser = event.user;
+            isSignedInNotifier.value = true;
+            // Optionally auto-initialize drive API
+            await _initializeDriveApi();
+          } else if (event is GoogleSignInAuthenticationEventSignOut) {
+            _currentUser = null;
+            _driveApi = null;
+            isSignedInNotifier.value = false;
+          }
+        },
+        onError: (error) {
+          print('Authentication Error: $error');
+        },
+      );
     } catch (e) {
       // Ignore silent sign-in errors
       print('Silent sign-in failed: $e');
