@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
-import 'package:flutter/foundation.dart' show ValueNotifier;
+import 'package:flutter/foundation.dart' show ValueNotifier, kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:extension_google_sign_in_as_googleapis_auth/extension_google_sign_in_as_googleapis_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -28,6 +28,7 @@ class GoogleDriveService {
   GoogleSignInAccount? _currentUser;
   
   StreamSubscription<GoogleSignInAuthenticationEvent>? _authSubscription;
+  Completer<GoogleSignInAccount>? _signInCompleter;
   
   /// ValueNotifier exposing the current login status reactively to the UI
   final ValueNotifier<bool> isSignedInNotifier = ValueNotifier<bool>(false);
@@ -41,11 +42,24 @@ class GoogleDriveService {
   /// Returns the DriveApi instance if initialized, else null
   drive.DriveApi? get driveApi => _driveApi;
 
+  /// Returns true if Google Sign-In is supported on the current platform
+  bool get _isGoogleSignInSupported =>
+      kIsWeb ||
+      defaultTargetPlatform == TargetPlatform.android ||
+      defaultTargetPlatform == TargetPlatform.iOS ||
+      defaultTargetPlatform == TargetPlatform.macOS;
+
   /// Initialize the service by checking for silent sign-in
   Future<void> initialize() async {
+    if (!_isGoogleSignInSupported) return;
     try {
       // 1. Initialize GoogleSignIn instance
-      await GoogleSignIn.instance.initialize();
+      // clientId      → used on iOS/macOS/Web
+      // serverClientId → required on Android (Web OAuth client ID for Credential Manager)
+      await GoogleSignIn.instance.initialize(
+        clientId: '934155222240-st2sob8505vc7mbgm6uvfs5d018al253.apps.googleusercontent.com',
+        serverClientId: '934155222240-st2sob8505vc7mbgm6uvfs5d018al253.apps.googleusercontent.com',
+      );
 
       // 2. Listen to authentication events
       _authSubscription ??= GoogleSignIn.instance.authenticationEvents.listen(
@@ -53,7 +67,11 @@ class GoogleDriveService {
           if (event is GoogleSignInAuthenticationEventSignIn) {
             _currentUser = event.user;
             isSignedInNotifier.value = true;
-            // Optionally auto-initialize drive API
+            // Notify any pending signIn() call that the user is now set
+            if (_signInCompleter != null && !_signInCompleter!.isCompleted) {
+              _signInCompleter!.complete(event.user);
+            }
+            // Initialize Drive API (fetch authorization)
             await _initializeDriveApi();
           } else if (event is GoogleSignInAuthenticationEventSignOut) {
             _currentUser = null;
@@ -63,6 +81,9 @@ class GoogleDriveService {
         },
         onError: (error) {
           print('Authentication Error: $error');
+          if (_signInCompleter != null && !_signInCompleter!.isCompleted) {
+            _signInCompleter!.completeError(error);
+          }
         },
       );
     } catch (e) {
@@ -77,39 +98,60 @@ class GoogleDriveService {
     }
   }
 
-  /// Triggers the Google Sign-In flow
-  Future<bool> signIn() async {
+  /// Triggers the Google Sign-In flow. Throws on failure so callers can show errors.
+  Future<void> signIn() async {
+    if (!_isGoogleSignInSupported) {
+      throw Exception('Google Sign-In is not supported on this platform.');
+    }
+    // Create a completer that will be resolved by the auth event listener
+    _signInCompleter = Completer<GoogleSignInAccount>();
     try {
-      // Authenticate
+      // authenticate() triggers the sign-in UI; the result comes via the event stream
       await GoogleSignIn.instance.authenticate();
 
-      if (_currentUser == null) {
-        return false;
-      }
-
-      return await authorize();
+      // Wait for the stream event to fire and populate _currentUser
+      await _signInCompleter!.future.timeout(
+        const Duration(seconds: 30),
+        onTimeout: () => throw Exception('Sign-in timed out. Please try again.'),
+      );
     } catch (error) {
+      _signInCompleter = null;
+      _currentUser = null;
+      isSignedInNotifier.value = false;
       print('Sign-In Error: $error');
-      return false;
+      rethrow; // propagate to SyncNotifier so UI can show the error
     }
+    _signInCompleter = null;
+
+    // Now request Drive scope authorization
+    await authorize();
   }
 
-  /// Request missing authorization scopes dynamically
-  Future<bool> authorize() async {
-    if (_currentUser == null) return false;
+  /// Request Drive scope authorization. Throws on failure so callers can show errors.
+  Future<void> authorize() async {
+    if (!_isGoogleSignInSupported) {
+      throw Exception('Google Sign-In is not supported on this platform.');
+    }
+    if (_currentUser == null) {
+      throw Exception('Not signed in. Please sign in first.');
+    }
+    // Try cached authorization first; if not available, request it
+    GoogleSignInClientAuthorization? authorization;
     try {
-      var authorization = await _currentUser!.authorizationClient.authorizationForScopes(_scopes);
-      authorization ??= await _currentUser!.authorizationClient.authorizeScopes(_scopes);
-      await _initializeDriveApi(authorization);
-      return _driveApi != null;
-    } catch (error) {
-      print('Authorization Error: $error');
-      return false;
+      authorization = await _currentUser!.authorizationClient.authorizationForScopes(_scopes);
+    } catch (_) {
+      // Not yet authorized — will request below
+    }
+    authorization ??= await _currentUser!.authorizationClient.authorizeScopes(_scopes);
+    await _initializeDriveApi(authorization);
+    if (_driveApi == null) {
+      throw Exception('Failed to initialize Drive API after authorization.');
     }
   }
 
   /// Signs out the current user
   Future<void> signOut() async {
+    if (!_isGoogleSignInSupported) return;
     await GoogleSignIn.instance.disconnect();
     _currentUser = null;
     _driveApi = null;
@@ -284,9 +326,10 @@ class GoogleDriveService {
         
         // Make sure Drive API is authorized and initialized before syncing 
         if (_driveApi == null) {
-          final authorized = await authorize();
-          if (!authorized) {
-            print('Background sync failed: drive access not authorized.');
+          try {
+            await authorize();
+          } catch (e) {
+            print('Background sync failed: drive access not authorized. $e');
             return;
           }
         }

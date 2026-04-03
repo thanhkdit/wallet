@@ -70,10 +70,8 @@ class SyncNotifier extends StateNotifier<SyncStateData> {
 
   Future<void> signIn() async {
     try {
-      final success = await _driveService.signIn();
-      if (success) {
-        state = state.copyWith(state: SyncState.idle); // trigger rebuild to show profile
-      }
+      await _driveService.signIn(); // throws on failure
+      state = state.copyWith(state: SyncState.idle); // trigger rebuild to show profile
     } catch (e) {
       state = state.copyWith(state: SyncState.error, errorMessage: e.toString());
     }
@@ -91,9 +89,10 @@ class SyncNotifier extends StateNotifier<SyncStateData> {
     }
 
     if (_driveService.driveApi == null) {
-      final success = await _driveService.authorize();
-      if (!success) {
-        state = state.copyWith(state: SyncState.error, errorMessage: 'Drive access not authorized');
+      try {
+        await _driveService.authorize(); // throws on failure
+      } catch (e) {
+        state = state.copyWith(state: SyncState.error, errorMessage: 'Drive access not authorized: $e');
         return;
       }
     }

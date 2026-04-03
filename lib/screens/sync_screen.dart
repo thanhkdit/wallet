@@ -4,17 +4,55 @@ import 'package:google_fonts/google_fonts.dart';
 import '../providers/sync_provider.dart';
 import '../services/google_drive_service.dart';
 import '../theme/app_theme.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'web_signin_stub.dart' if (dart.library.js_interop) 'package:google_sign_in_web/web_only.dart' as web;
 
 class SyncScreen extends ConsumerWidget {
   const SyncScreen({super.key});
+
+  bool get _isGoogleSignInSupported =>
+      kIsWeb ||
+      defaultTargetPlatform == TargetPlatform.android ||
+      defaultTargetPlatform == TargetPlatform.iOS ||
+      defaultTargetPlatform == TargetPlatform.macOS;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final syncState = ref.watch(syncProvider);
     final autoSync = ref.watch(autoSyncProvider);
     final driveService = GoogleDriveService();
+
+    if (!_isGoogleSignInSupported) {
+      return Scaffold(
+        backgroundColor: AppTheme.backgroundColor,
+        appBar: AppBar(
+          title: Text('Sync Settings',
+              style: GoogleFonts.nunito(
+                  color: AppTheme.textColor, fontWeight: FontWeight.bold)),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          centerTitle: true,
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.cloud_off, size: 64, color: Colors.grey),
+                const SizedBox(height: 16),
+                Text(
+                  'Google Drive sync is not available on this platform.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.nunito(
+                      fontSize: 16, color: Colors.grey[600]),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     // Listen for conflict state to show dialog
     ref.listen<SyncStateData>(syncProvider, (previous, next) {
