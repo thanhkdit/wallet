@@ -128,10 +128,8 @@ class _ExpenseCardState extends State<ExpenseCard> with SingleTickerProviderStat
                               ),
                               const SizedBox(width: 8),
                               Expanded(
-                                child: Wrap(
-                                  alignment: WrapAlignment.spaceBetween,
-                                  crossAxisAlignment: WrapCrossAlignment.center,
-                                  runSpacing: 4,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       e.note.isEmpty ? 'Expense' : e.note,
@@ -140,13 +138,20 @@ class _ExpenseCardState extends State<ExpenseCard> with SingleTickerProviderStat
                                         fontWeight: FontWeight.w600,
                                         color: textColor.withValues(alpha: 0.7),
                                       ),
+                                      softWrap: true,
                                     ),
-                                    Text(
-                                      CurrencyFormatter.format(e.amount),
-                                      style: GoogleFonts.nunito(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.bold,
-                                        color: textColor.withValues(alpha: 0.8),
+                                    const SizedBox(height: 2),
+                                    Align(
+                                      alignment: Alignment.centerRight,
+                                      child: Text(
+                                        CurrencyFormatter.format(e.amount),
+                                        textAlign: TextAlign.right,
+                                        style: GoogleFonts.nunito(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                          fontStyle: FontStyle.italic,
+                                          color: textColor.withValues(alpha: 0.8),
+                                        ),
                                       ),
                                     ),
                                   ],
