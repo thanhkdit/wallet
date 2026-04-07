@@ -57,7 +57,7 @@ class GoogleDriveService {
       // clientId      → used on iOS/macOS/Web
       // serverClientId → required on Android (Web OAuth client ID for Credential Manager)
       await GoogleSignIn.instance.initialize(
-        clientId: '934155222240-st2sob8505vc7mbgm6uvfs5d018al253.apps.googleusercontent.com',
+        clientId: '934155222240-klq31jh2t9atmj9bjgkg167kk989b2mt.apps.googleusercontent.com',
         serverClientId: '934155222240-st2sob8505vc7mbgm6uvfs5d018al253.apps.googleusercontent.com',
       );
 
